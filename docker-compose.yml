@@ -1,0 +1,59 @@
+---
+version: '3.4'
+
+x-build-args:
+  &build-args
+  GO_VER: 1.23
+  ALPINE_VER: 3.19
+
+x-logging:
+  &logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "8m"
+      tag: "{{.ImageName}}|{{.Name}}"
+      
+x-common-env: &commonenv
+  NETWORK: tcp
+
+services:
+  j-son-server:
+    container_name: j-son-server
+    <<: *logging
+    build:
+      context: .
+      dockerfile: cmd/server/Dockerfile
+      args:
+        <<: *build-args
+    environment:
+      <<: *commonenv
+      ADDRESS: :8080
+      ALGORITHM: sha256
+      DIFFICULTY: 5
+      IS_PRODUCTION: "false"
+    networks:
+      - internal
+    ports:
+      - 8080:8080
+
+  j-son-client:
+    container_name: j-son-client
+    <<: *logging
+    
+    build:
+      context: .
+      dockerfile: cmd/client/Dockerfile
+      args:
+        <<: *build-args
+    environment:
+      <<: *commonenv
+      ADDRESS: j-son-server:8080
+    networks:
+      - internal
+    depends_on:
+      - j-son-server
+
+networks:
+  internal:
+    external: true
